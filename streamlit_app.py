@@ -71,21 +71,20 @@ st.markdown('<div class="ironman-header"><p class="ironman-logo-text">IRONMAN</p
 if uploaded_file:
     data = process_data(uploaded_file)
     if data is not None:
-        # Filtrera fram senaste passen för mätarna
         latest_run = data[data['Aktivitetstyp'].str.contains('Löpning|Landsvägslöpning', na=False, case=False)].iloc[0] if not data.empty else None
         latest_bike = data[data['Aktivitetstyp'].str.contains('Cykling|Virtuell cykling', na=False, case=False)].iloc[0] if not data.empty else None
         latest_swim = data[data['Aktivitetstyp'].str.contains('Simning|Simbassäng', na=False, case=False)].iloc[0] if not data.empty else None
         
-        # Beräkna veckovolym (Senaste 4 veckorna)
         data['Vecka'] = data['Datum'].dt.isocalendar().week
         current_week = date.today().isocalendar()[1]
-        weekly_data = data[data['Vecka'] > (current_week - 5)] # Tar med lite extra för säkerhets skull
+        weekly_data = data[data['Vecka'] > (current_week - 5)]
         
         def get_weekly_sum(activity_filter):
             subset = weekly_data[weekly_data['Aktivitetstyp'].str.contains(activity_filter, na=False, case=False)]
             return subset.groupby('Vecka')['Distans'].sum()
 
-        swim_vol = get_weekly_sum('Simning|Simbassäng')
+        # Konvertera simning från km till meter i grafen
+        swim_vol = get_weekly_sum('Simning|Simbassäng') * 1000
         bike_vol = get_weekly_sum('Cykling|Virtuell cykling')
         run_vol = get_weekly_sum('Löpning|Landsvägslöpning')
     else:
@@ -131,7 +130,11 @@ with tab_lop:
 with tab_sim:
     if data is not None and latest_swim is not None:
         st.subheader(f"Senaste passet: {latest_swim['Datum'].date()}")
+        # Konvertera distans till meter för visning
+        swim_dist = latest_swim.get("Distans", 0)
+        swim_m = int(float(swim_dist) * 1000) if swim_dist != "--" else "--"
+        
         c1, c2, c3 = st.columns(3)
         with c1: st.markdown(f'<div class="hero-metric" style="border-bottom-color: #0ea5e9;"><div class="hero-label">SWOLF</div><div class="hero-value">{latest_swim.get("Medel-Swolf", "--")}</div></div>', unsafe_allow_html=True)
         with c2: st.markdown(f'<div class="hero-metric" style="border-bottom-color: #0ea5e9;"><div class="hero-label">TEMPO</div><div class="hero-value">{latest_swim.get("Medeltempo", "--")}</div></div>', unsafe_allow_html=True)
-        with c3: st.markdown(f'<div class="hero-metric" style="border-bottom-color: #0ea5e9;"><div class="hero-label">STRÄCKA</div><div class="hero-value">{latest_swim.get("Distans", "--")} m</div></div>', unsafe_allow_html=True)
+        with c3: st.markdown(f'<div class="hero-metric" style="border-bottom-color: #0ea5e9;"><div class="hero-label">STRÄCKA</div><div class="hero-value">{swim_m} m</div></div>', unsafe_allow_html=True)
