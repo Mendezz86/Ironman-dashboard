@@ -1,0 +1,5 @@
+streamlit
+garminconnect
+garth
+pandas
+numpy
