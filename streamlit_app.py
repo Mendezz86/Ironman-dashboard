@@ -79,11 +79,59 @@ if uploaded_file:
         # Beräkna veckovolym (Senaste 4 veckorna)
         data['Vecka'] = data['Datum'].dt.isocalendar().week
         current_week = date.today().isocalendar()[1]
-        weekly_data = data[data['Vecka'] > (current_week - 4)]
+        weekly_data = data[data['Vecka'] > (current_week - 5)] # Tar med lite extra för säkerhets skull
         
         def get_weekly_sum(activity_filter):
             subset = weekly_data[weekly_data['Aktivitetstyp'].str.contains(activity_filter, na=False, case=False)]
             return subset.groupby('Vecka')['Distans'].sum()
 
         swim_vol = get_weekly_sum('Simning|Simbassäng')
-        bike_vol = get_weekly_sum('C
+        bike_vol = get_weekly_sum('Cykling|Virtuell cykling')
+        run_vol = get_weekly_sum('Löpning|Landsvägslöpning')
+    else:
+        latest_run = latest_bike = latest_swim = None
+else:
+    data = None
+
+# --- FLIKAR ---
+tab_form, tab_cykel, tab_lop, tab_sim = st.tabs(["🩺 DAGSFORM", "🚴 CYKEL", "🏃 LÖPNING", "🏊 SIMNING"])
+
+with tab_form:
+    if data is not None:
+        st.subheader("Veckovolym (Senaste veckorna)")
+        c1, c2, c3 = st.columns(3)
+        with c1:
+            st.write("**Simning (m)**")
+            st.bar_chart(swim_vol, color="#0ea5e9")
+        with c2:
+            st.write("**Cykling (km)**")
+            st.bar_chart(bike_vol, color="#ef4444")
+        with c3:
+            st.write("**Löpning (km)**")
+            st.bar_chart(run_vol, color="#f59e0b")
+    else:
+        st.info("Ladda upp din fil för att se din progression.")
+
+with tab_cykel:
+    if data is not None and latest_bike is not None:
+        st.subheader(f"Senaste passet: {latest_bike['Datum'].date()}")
+        c1, c2, c3 = st.columns(3)
+        with c1: st.markdown(f'<div class="hero-metric"><div class="hero-label">NP® WATT</div><div class="hero-value">{latest_bike.get("Normalized Power® (NP®)", "--")}</div></div>', unsafe_allow_html=True)
+        with c2: st.markdown(f'<div class="hero-metric"><div class="hero-label">DISTANS</div><div class="hero-value">{latest_bike.get("Distans", "--")} km</div></div>', unsafe_allow_html=True)
+        with c3: st.markdown(f'<div class="hero-metric"><div class="hero-label">TSS®</div><div class="hero-value">{latest_bike.get("Training Stress Score®", "--")}</div></div>', unsafe_allow_html=True)
+
+with tab_lop:
+    if data is not None and latest_run is not None:
+        st.subheader(f"Senaste passet: {latest_run['Datum'].date()}")
+        c1, c2, c3 = st.columns(3)
+        with c1: st.markdown(f'<div class="hero-metric" style="border-bottom-color: #f59e0b;"><div class="hero-label">MARKKONTAKT</div><div class="hero-value">{latest_run.get("Medeltid för markkontakt", "--")} ms</div></div>', unsafe_allow_html=True)
+        with c2: st.markdown(f'<div class="hero-metric" style="border-bottom-color: #f59e0b;"><div class="hero-label">BALANS</div><div class="hero-value">{latest_run.get("Medelkontakttidsbalans", "--")}</div></div>', unsafe_allow_html=True)
+        with c3: st.markdown(f'<div class="hero-metric" style="border-bottom-color: #f59e0b;"><div class="hero-label">KADENS</div><div class="hero-value">{latest_run.get("Medellöpkadens", "--")} spm</div></div>', unsafe_allow_html=True)
+
+with tab_sim:
+    if data is not None and latest_swim is not None:
+        st.subheader(f"Senaste passet: {latest_swim['Datum'].date()}")
+        c1, c2, c3 = st.columns(3)
+        with c1: st.markdown(f'<div class="hero-metric" style="border-bottom-color: #0ea5e9;"><div class="hero-label">SWOLF</div><div class="hero-value">{latest_swim.get("Medel-Swolf", "--")}</div></div>', unsafe_allow_html=True)
+        with c2: st.markdown(f'<div class="hero-metric" style="border-bottom-color: #0ea5e9;"><div class="hero-label">TEMPO</div><div class="hero-value">{latest_swim.get("Medeltempo", "--")}</div></div>', unsafe_allow_html=True)
+        with c3: st.markdown(f'<div class="hero-metric" style="border-bottom-color: #0ea5e9;"><div class="hero-label">STRÄCKA</div><div class="hero-value">{latest_swim.get("Distans", "--")} m</div></div>', unsafe_allow_html=True)
